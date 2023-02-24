@@ -1,0 +1,645 @@
+---
+title: "HW1 - SDS"
+author: "Aguanno Irene - Barboni Alessio"
+date: "A.Y. 2021-2022"
+output:
+  prettydoc::html_pretty:
+    theme: architect
+    highlight: vignette
+---
+
+# EXERCISE 1
+
+
+## 1.1
+
+The Johnson-Lindenstrauss lemma
+
+\begin{equation}
+
+L * \mathbf{x^{(k-1)}} = \mathbf{y^{(k-1)}} \\
+L * \mathbf{x^{(k)}} = \mathbf{y^{(k)}} \\
+\mbox{That applying the lemma it is equal to:} \\
+\mathbf{y^{(k-1)}} + L[,j] = \mathbf{y^{(k)}}\\
+\end{equation}
+Let's plug letters in...
+\begin{equation}
+\begin{bmatrix}
+    l_{11} &   l_{12}   &  \dots  & l_{1j} &  \dots & l_{1d} \\
+    l_{21} &   l_{22}   &  \dots  & l_{2j} &  \dots & l_{2d} \\
+    \vdots &   \vdots   &  \dots  &  \vdots &  \dots &  \vdots \\
+    l_{p1} &   l_{p2}   &  \dots  & l_{pj} &  \dots & l_{pd}
+\end{bmatrix}
+
+
+\begin{bmatrix}
+    x_{11}  \\
+    x_{21}  \\
+    \vdots  \\
+    x_{j1}  \\
+    \vdots  \\
+    x_{d1}
+\end{bmatrix}
+
+=
+
+\begin{bmatrix}
+    l_{11}x_{11} +   l_{12}x_{21} &  \dots & l_{1j}x_{j1} + \dots + l_{1d}x_{d1} \\
+    l_{21}x_{11} +   l_{22}x_{21} & \dots  & l_{2j}x_{j1} + \dots + l_{2d}x_{d1} \\
+    \vdots &   \dots  &  \vdots          \\
+    l_{p1}x_{11} +   l_{p2}x_{21} & \dots & l_{pj}x_{j1}  + \dots + l_{pd}x_{d1}
+\end{bmatrix}
+
+= \mathbf{y^{(k-1)}}
+
+\end{equation}
+
+
+\begin{equation}
+\begin{bmatrix}
+    l_{11} &   l_{12}   &  \dots  & l_{1j} &  \dots & l_{1d} \\
+    l_{21} &   l_{22}   &  \dots  & l_{2j} &  \dots & l_{2d} \\
+    \vdots &   \vdots   &  \dots  &  \vdots &  \dots &  \vdots \\       
+    l_{p1} &   l_{p2}   &  \dots  & l_{pj} &  \dots & l_{pd}
+\end{bmatrix}
+
+
+\begin{bmatrix}
+    x_{11}  \\
+    x_{21}  \\
+    \vdots  \\
+    x_{j1} + \mathbf{1}  \\
+    \vdots  \\
+    x_{d1}
+\end{bmatrix}
+
+=
+
+\begin{bmatrix}
+    l_{11}x_{11} + l_{12}x_{21} + & \dots &+ l_{1j}(x_{j1} + \mathbf{1}) + & \dots & + l_{1d}x_{d1} \\
+    l_{21}x_{11} +   l_{22}x_{21} + &\dots & + l_{2j}(x_{j1} + \mathbf{1}) + &\dots & + l_{2d}x_{d1} \\
+    \vdots &   \dots     &  \vdots    &   \dots     &  \vdots  \\
+    l_{p1}x_{11} +   l_{p2}x_{21} + & \dots & + l_{pj}(x_{j1} + \mathbf{1})  + & \dots & + l_{pd}x_{d1}
+\end{bmatrix}
+
+= \\
+
+=
+
+\begin{bmatrix}
+    l_{11}x_{11} + l_{12}x_{21} +  & \dots &  + l_{1j}x_{j1} + \mathbf{l_{1j}} + & \dots & l_{1d}x_{d1} \\
+    l_{21}x_{11} + l_{22}x_{21} + & \dots & + l_{2j}x_{j1} + \mathbf{l_{2j}} + & \dots & l_{2d}x_{d1} \\
+    \vdots &   \dots     &  \vdots    &   \dots     &  \vdots  \\
+    l_{p1}x_{11} + l_{p2}x_{21} + & \dots & + l_{pj}x_{j1} + \mathbf{l_{pj}}  + & \dots & l_{pd}x_{d1}
+\end{bmatrix}
+
+= \mathbf{y^{(k)}}
+
+\end{equation}
+
+## 1.2
+
+```{r, cache = TRUE}
+set.seed(42) # to replicate results
+M <- 1000 # simulation size
+
+# Define necessary parameters
+epsilon <- 0.9 #being the error we assume that it belong to (0,1) 
+n <- 300
+p <- round(log(n)/epsilon**2,0) 
+d <- 10000 
+
+
+
+bound <- 1 - exp(-epsilon**(2)*p) # bound respected with the JL 
+v <- NULL # initialize vector that will contain
+
+# Start simulation
+# Repeat M times
+for (i in 1:M) {
+  y = rep(0,p) # initialize y vector
+  x = rep(0,d) # initialize x vector
+  
+  # generate L matrix
+  L = matrix(rnorm(p*d, mean = 0, sd = sqrt(1/p)), nrow=p)
+  
+  # Repeat n times:
+  # 1) sample a value j from 1 to d (same as if we sampled from the stream, 
+  # but without needing to store it)
+  # 2) add 1 to the j-th position in x
+  # 3) update y using the information proved in ex. 1 of this hw
+  for (j in 1:n){
+    j = sample(1:d, 1)
+    x[j] = x[j] + 1 # we compute x only to calculate the norm
+    y = y + L[,j]
+  }
+  
+  # compute quantities needed in JL  
+  norm_x <- norm(x, type = "2") # norm of vector x
+  norm_y <- norm(y, type = "2") # norm of vector y
+  
+  right_hs <- norm_x*(1+epsilon) # right hand-side
+  left_hs <- norm_x*(1-epsilon) # left hand-side
+  
+  # check if the inequalities are both verified 
+  jl <- norm_y >= left_hs && norm_y <= right_hs 
+  # for each simulation, store if the inequalities are both verified or not
+  v[i] <- jl 
+}
+
+# count how many times the inequalities are both verified out of M simulations
+percentage_true <- sum(v)/M 
+print(percentage_true)
+
+# compute both sides of the JL lemma
+percentage_true >= bound
+bound
+```
+
+```{r, cache = TRUE}
+
+library(kableExtra)
+
+text_tbl <- data.frame(
+  epsilon = c("0.9",              "0.1",               "0.1"),
+  p =       c("log(n)/epsilon**2", "log(n)/epsilon**2", "log(n)/epsilon**2"),
+  n =       c("300",            "300",               "1000"),
+  d =      c("10000",          "5000",              "5000"),
+  bound = c("0.9608361",       "0.996",             "0.999"),
+  percentage_true = c("0.992",     "1",                 "0.999"),
+  M = c(   "1000",             "1000",              "1000")
+)
+
+kable(text_tbl) %>%
+  kable_styling(full_width = F)
+```
+Here, the JL lemma is verified for every choice of points. 
+
+More can be said about the distribution function used for sampling the points of the data stream. So far, we have assumed that each word of the data-alphabet has the same probability of being picked at each iteration (i.e., a uniform distribution), but it would be reasonable to assume, even for a network switch that may handle very heterogeneous data, that some information might be more frequent than others. Hence, we can iteratively reshape our probability mass function using past sampled data, with the idea that the topics that have been covered in the past have more probability of appearing that some other that has never appeared yet.
+
+```{r, cache = TRUE}
+pmf <- rep(1/d,d) #pmf at zero is a uniform
+set.seed(42)
+n<-10000
+for(i in 1:n){
+    j <- sample(1:d,1, prob=pmf)
+    pmf[j]=pmf[j]+1/d #this way pmf[j]<1 since n<d, hence it remains a prob 
+}
+plot(rep(1/d,d), main = "Probability Mass Function (Unif)")
+plot(pmf, main = "Probability Mass Function (Iteratively updated)")
+
+```
+
+In this case, since the data stream is supposed to be given, and it should not to be computed by the algorithm itself, we do not have to comply with any requirement.
+
+## 1.3 
+We have not achieved our goal. The algorithm does not satisfy the fourth requirement since it uses the required words of space in its entirety (i.e., $O(log(n)$) just for storing the vector $y$. Hence the projection matrix $L$, using $O(p*d)$ words of space where $p∼log(n)/eps^2$, would by no means fit in the memory requirement, in fact $O(log(n) + d*log(n)/eps^2)>O(log(n))$ with $d$≠0.  
+
+We propose the following workaround: 
+Since $L$ remains constant during all the iterations, and given that it is the result of sampling from a normal distribution with known parameters, we could just resample at each iteration the "needed quantities" exploiting the functionality of the seed. The seed has a maximum value it can take, namely:
+```{r, cache=TRUE}
+.Machine$integer.max
+```
+Thus, we cannot use a different seed value to generate the each and every column of the matrix (specifically the j-th column to add to $y$), given that there are $d$ columns and $d$ is a really large number (additionally, in order to have different $L$ matrices for every simulation, we would have to multiply it by the simulation number, ending up with a seed value that would even exeed the value of $d$). Hence, we could instead use the seed to generate the matrix itself, at each iteration of the stream, iteratively by keeping in memory just one column at a time. In this way the words of space used would be $O(p)$ for the i-th column of L (until we get to i=j), and $O(p)$ for vector $y$, thus $O(p+p)=O(p)=O(log(n)/eps^2)$.
+
+
+```{r, cache=TRUE, eval=FALSE}
+# 1.3 - Simulation --------------------------------------------------------
+epsilon <- 0.9
+p <- 16/epsilon**2 # 100
+n <- 300
+d <- 1000
+M<-1000
+v <- NULL
+bound <- 1 - exp(-epsilon**(2)*p)
+
+for(s in 1:M){
+  x<-rep(0,d)
+  y<-rep(0,p)
+  y_old<-y
+  for(i in 1:n){
+    set.seed(s) #to avoid having the same L matrix at each simulation
+    j <- sample(1:d,1)
+    x[j]=x[j]+1
+
+    k<-0
+    while (k!=j){
+      tempCol <- rnorm(p,mean=0,sd=sqrt(1/p))
+      k=k+1
+    }
+    jCol <-tempCol
+    y = y+jCol
+  }
+  
+  norm_x = sqrt(sum(x**2))
+  norm_y = sqrt(sum(y**2))
+  right_hs <- norm_x*(1+epsilon) # right hand-side
+  left_hs <- norm_x*(1-epsilon) # left hand-side
+  # check if the inequalities are both verified 
+  jl <- norm_y >= left_hs && norm_y <= right_hs 
+  # for each simulation, store if the inequalities are both verified or not
+  v[s] <- jl
+}
+
+percentage_true <- sum(v)/M 
+print(percentage_true)
+bound
+```
+
+Here, since the probability is 1 and bound=0.9999999, the JL lemma is verified once again. 
+
+Just for reference, we include also the code using different seeds to create the columns of L (note that this does not always work)
+```{r, eval=FALSE}
+jth_vector = function(seed, L, p){
+  # the seed is the index (i.e., j), such that if the same index is passed,
+  #we recreate the same vector (i.e., the same j-th column of L)
+  set.seed(seed)
+  
+  # sample p indexes, which will refer to values of the L vector
+  vector = sample(1:length(L), p)
+  # return the j-th column of L 
+  return(L[vector])
+}
+
+set.seed(42) # to replicate results
+
+M <- 1000 # simulation size
+
+# Define necessary parameters
+epsilon <- 2
+p <- 16/epsilon**2 # 100
+n <- 30
+d <- 1000
+
+
+bound <- 1 - exp(-epsilon**(2)*p) # bound respected with the JL 
+v <- NULL # initialize vector that will contain
+
+# generate L
+# it will not be a p by d matrix, but a vector
+L = rnorm(p * 2, mean = 0, sd = 1/sqrt(p))
+
+# Start simulation
+# Repeat M times
+for (simulation in 1:M) {
+  y = rep(0,p) # initialize y vector
+  x = rep(0,d) # initialize x vector
+  
+  # at each simulation, change the seed (otherwise, we always get the same indexes)
+  set.seed(42 * simulation)
+  
+  # Algorithm 
+  for(j in 1:n){
+    
+    set.seed(42 * simulation * j)
+    
+    # access value of j-th element in the stream (without generating the stream)
+    stream_value  = sample(1:d, 1)
+    
+    # add one to j-th element of x (here, j = stream_value)
+    x[stream_value] = x[stream_value] + 1
+    # update y after having generated a specific j-th vector
+    # (a combination of p values of L, specific for j)
+    y = y + jth_vector(stream_value, L, p)
+  }
+  
+  # as in point 2
+  norm_x = sqrt(sum(x**2))
+  norm_y = sqrt(sum(y**2))
+  
+  right_hs <- norm_x*(1+epsilon) # right hand-side
+  left_hs <- norm_x*(1-epsilon) # left hand-side
+  
+  # check if the inequalities are both verified 
+  jl <- norm_y >= left_hs && norm_y <= right_hs 
+  # for each simulation, store if the inequalities are both verified or not
+  v[simulation] <- jl 
+}
+
+# count how many times the inequalities are both verified out of M simulations
+percentage_true <- sum(v)/M 
+print(percentage_true)
+bound
+```
+
+
+
+# EXERCISE 2
+
+## 2.1
+
+For a probability density function to be legit, we must impose two conditions:
+
+1) It is non-negative everywhere: $$\hat{f}(x) = \sum_{j=1}^{N}\frac{\pi_j}{h} \mathbb{1}(x \epsilon B_j) \ge 0$$ which implies that $\pi_j \ge 0$
+
+2) It integrates to 1 over its support:
+
+\begin{equation}
+\int_0^1 \hat{f}(x) \, dx = \int_0^1  	\sum_{j=1}^{N}\frac{\pi_j}{h} \mathbb{1}(x \epsilon B_j) \, dx = 1
+\end{equation}
+
+
+
+\begin{equation}
+\int_0^1  	\sum_{j=1}^{N}\frac{\pi_j}{h} \mathbb{1}(x \epsilon B_j) \, dx = 
+\sum_{j=1}^{N}\frac{\pi_j}{h} \int_0^1  	 \mathbb{1}(x \epsilon B_j) \, dx = \\
+
+= \sum_{j=1}^{N}\frac{\pi_j}{h}  \int_{B_{j - 1}}^{B_j} \, dx = \\
+\sum_{j=1}^{N}\frac{\pi_j}{h} * h = 1
+
+\\
+
+
+\sum_{j=1}^{N} \pi_j = 1
+
+\end{equation}
+
+
+## 2.2
+
+To implement the density function f_hat and its quantile, we first generate the $\pi$'s using the function GeneratorPi, which provides us with N positive $\pi$'s that sum up to 1. That is, we create N $\pi$'s such that the above conditions are respected.
+
+```{r, cache = TRUE}
+# generate N pi's that sum up to 1 (where N = ceiling(1/h))
+GeneratorPi <- function(h){pi <- runif(ceiling(1/h),0,1); pi <- pi/sum(pi); return(pi)}
+
+```
+
+We implement the approximating density f_hat giving it as parameters x, h, $\pi$ and the possibility to create a graph. For each x, it will return the corresponding $\pi$/h, which will be needed further on.
+
+```{r, cache = TRUE}
+library(data.table)
+
+f_hat <- function(x, h, pi, graph =FALSE){
+  N <- ceiling(1/h)
+  
+  # generate intervals of length h between 0 and 1
+  B_j <- seq(0, 1, h) 
+  
+  # initialize vector of y's. To each x we will have an associated y
+  y <- c() 
+  if(sum(pi)!=1){stop(cat("The condition on pi's is not respected as the sum is ", sum(pi),". 
+                          It should be = 1"))}
+  
+  # loop on the bins
+  for(i in 1:N){ 
+    
+    # loop on the elements of x 
+    for(j in 1:length(x)){
+      if(pi[i]<0){errorCondition("The pi's are not all positive")}
+      
+      # For each x, find the bin to which it belongs to and associate to it the pi of that bin (y) 
+      if( between(x[j],B_j[i],B_j[i+1])){y[j] <- pi[i]/h}  
+    }}
+  
+  # generate graph
+  if(graph == TRUE){plot(x,y,ylim = c(0,max(y)+1)); lines(x,y,type = "s")}
+  return(y)
+}
+```
+
+
+```{r, cache = TRUE}
+# example
+x <- seq(0, 1, 0.01)
+h <- 0.2
+# generate pi's
+pi <- GeneratorPi(h)
+
+# verify that they sum up to 1
+sum(pi)
+
+# compute f_hat
+f_hat(x, h, pi, graph = TRUE)
+
+```
+
+### QUANTILE FUNCTION
+
+We carry on with the implementation of the quantile function, which - for each quantile level q we provide it with - will return us the smallest value of x such that the CDF is at least q.
+
+```{r, cache = TRUE}
+quant <- function(q, pi, h, graph=F){
+  
+  # build cdf
+  cdf <- cumsum(pi) 
+  
+  # bins
+  B <- seq(0,1,h) 
+  N <- ceiling(1/h)
+  
+  # create plot
+  if (graph == TRUE){
+    plot(B, c(cdf, 1), type="s", main = "CDF and Quantiles",ylim = c(0,1),xlim = c(0,1), ylab = "q")
+    abline(v = c(0,B), lty = 3,col ="WHITE")
+    abline(h = q, lty = 2, col="red",lwd=2)}
+  
+  if(length(pi) != N){stop("Number of pi's differs from number of bins")}
+  
+  # return 0
+  if(q < cdf[1]){return(0)}
+  
+  # if q is between two steps, return first value of larger step
+  # (remember that each step starts where a new bin starts)
+  for(i in 1:N){if(between(q,cdf[i],cdf[i+1])){return(B[i+1])}
+    
+    # if q is at the same height of a bin, return the starting value of that bin
+    if(q==cdf[i]){return(B[i])}
+  }
+}
+```
+
+
+```{r, cache = TRUE}
+# find a few quantiles and plot them together with the cdf
+h <- 0.2
+pi <- GeneratorPi(h)
+sum(pi)
+
+
+for(q in seq(0,1,0.2)){
+  cat("At the level", q, ", the quantile is: ", quant(q,pi,h, graph = T),"\n")
+}
+
+```
+
+
+## 2.3
+
+We now fix \begin{equation}
+\pi_j = \int_{B_j} f(x) \, dx 
+\end{equation}. This will ensure that our $\pi$'s sum up to 1
+
+```{r, cache = TRUE}
+FixPi <- function(h,alpha,beta){ 
+  
+  # define number of bins
+  N <- ceiling(1/h) 
+  B <- c(seq(0,1,h),1) 
+  
+  # define bins
+  pi <- c()
+  
+  # compute pi's following the formula:
+  # each pi is the area under a beta distribution over the interval b_j
+  for (j in 1:N){pi[j] <- pbeta(B[j+1],alpha,beta)-pbeta(B[j],alpha,beta)}
+  return(pi)
+}
+```
+
+
+```{r, cache = TRUE}
+alpha <- 3
+beta <- 2
+h <- c( 0.01, 0.1, 0.2, 0.5, 0.75)
+for(i in 1:length(h)){ val <- FixPi(h[i],alpha,beta)
+cat("With h=",h[i],", N =", ceiling(1/h[i]),", the parameters are:",val,". Their sum is", sum(val), ". \n")}
+```
+
+Notice that by selecting alpha = 1 and beta = 1, we get a uniform distribution. Given h, the FixPi function we defined above computes N $\pi$'s that are all equal. Such a behavior has to be expected: the $\pi$'s are the height of our bins and in a uniform distribution all the bins are high the same.
+
+```{r, cache = TRUE}
+alpha <- 1
+beta <- 1
+h <- c( 0.01, 0.1, 0.2, 0.5, 0.75)
+for(i in 1:length(h)){ val <- FixPi(h[i],alpha,beta)
+
+cat("With h=",h[i],", N =", ceiling(1/h[i]),", the parameters are:",val,". Their sum is", sum(val), ". \n")}
+```
+
+### Wasserstein Distance
+
+We continue our analysis with the implementation of the Wasserstein distance between the quantile function of the approximated density that we computed above and the quantile funtion of the true beta distribution.
+
+```{r, cache = TRUE}
+Wasserstein <- function(h,alpha,beta,M = 1000){
+  
+  # as.matrix because apply wants a matrix or dataframe
+  x <- as.matrix(seq(0,1,1/M),ncol = 1) 
+  
+  # apply the formula to compute the Wasserstein distance:
+  
+  # 1) subtract the quantile function of the approximated distribution (quant)
+  # from the quantile function of the true beta distribution (qbeta)
+  
+  # 2) compute the absolute value
+  
+  # 3) add the distances up
+  f <- function(x) {abs(qbeta(x, alpha, beta) - quant(x, pi = FixPi(h,alpha,beta),h))}
+  result <- apply(x,1,FUN = f)
+  return(sum(result))
+}
+```
+
+
+```{r, cache = TRUE}
+# compute the Wasserstein distance for the following h's
+h <- c(0.001, 0.01, 0.1, 0.2, 0.5, 0.75)
+
+for (i in h) {
+  w <- Wasserstein(i,alpha,beta)
+  print(w)}
+
+```
+
+
+
+```{r, cache = TRUE}
+
+library(kableExtra)
+
+text_tbl <- data.frame(
+  h = c("0.001", "0.01", "0.1", "0.2", "0.5", "0.75"),
+  Wass_distance = c("0.5030", "5.0150", "50.085", "100.485", "256.485", "403.985")
+
+)
+
+kable(text_tbl) %>%
+  kable_styling(full_width = F)
+```
+
+We notice that for smaller h's, the Wasserstein distance is shorter. This makes sense: a smaller h implies more bins and more bins lead to a better approximation of the true density, which - in turn - entails a lower distance.  
+
+### Largest h
+
+With the Largest_h function below we now aim at finding the largest h (out of the ones we pass as parameters) for which the Wasserstein distance is below a given threshold epsilon. 
+
+```{r, cache = TRUE}
+Largest_h <- function(h,epsilon){
+  
+   # initialize largest h to 0
+  h_max <- 0
+  for(i in 1:length(h)){
+    
+    # compute wasserstein distance
+    wass_H <- Wasserstein(h[i],alpha,beta) 
+    
+    # if h makes the Wasserstein distance smaller than the chosen epsilon
+    # and is larger than the previous h_max, 
+    # assign h_max to h
+    if (wass_H<epsilon){h_max <- h[i]}} 
+  
+  # return the largest h for which the Wasserstein distance is smaller than epsilon
+  return(h_max)
+}
+```
+
+
+
+```{r, cache = TRUE}
+# example
+set.seed(123)
+h <- runif(300, 0, 0.5)
+epsil <- 50
+new_h <- Largest_h(h,epsil)
+new_h
+```
+
+### Study h as epsilon changes
+
+Lastly, we see how h varies with epsilon. To do that, we first of all generate a list of h's and a list of epsilon's, that we will pass as parameters to the Largest_h function. Namely, for each epsilon we find the largest h for which the Wasserstein distance is smaller than epsilon itself. Once we have collected the largest h for every epsilon, we perform a linear regression.
+
+```{r, cache = TRUE}
+# generate 100 h's, uniform between 0 and 1
+h <- sort(runif(100))
+
+# generate a list of epsilons (one every 10 from 1 to 700)
+eps_list <- round(seq(1, 700, 10), 0)
+
+# vector of largest h's
+e_h <- c()
+
+# for each epsilon, find the largest h for which a Wasserstein distance smaller than epsilon exists
+for (e in 1:length(eps_list)){
+  e_h[e] <- Largest_h(h, eps_list[e])
+  cat("h =", e_h[e], "& epsilon = ",eps_list[e], "\n")
+}
+```
+
+
+```{r, cache = TRUE}
+# only take first 61 h's and epsilon's (as for larger epsilons the largest h is always the same)
+e_h1 <- e_h[1:61]
+eps_list1 <- eps_list[1:61] 
+
+# fit linear regression model
+model <- lm(e_h1~ eps_list1)
+
+# show how the lr line would be if we kept the observations we dropped
+model1 <- lm(e_h ~ eps_list )
+
+# summary model
+summary(model)
+```
+
+From the summary of our model, we see that as the epsilons grow by 100 units, the h grows - on average - of 0.161 units. Such a behavior can also be observed by the graph below.
+
+```{r}
+# plot
+plot(eps_list, e_h, xlab = "EPSILON", ylab="h",main = c("VARIATIONS OF h AS EPSILON CHANGES"),
+     col="violetred1",pch=16)
+abline(model, col= "seagreen3",lwd=2)
+abline(model1, col= "mediumpurple",lwd=1,lty =2)
+```
+
+
